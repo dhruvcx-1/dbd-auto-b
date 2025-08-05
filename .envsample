@@ -1,3 +1,4 @@
 TOKEN=your_discord_token_here
 BUMP_CHANNEL=your_bump_channel_id
 LOG_CHANNEL=your_log_channel_id
+STATUS=your_status_here
