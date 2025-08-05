@@ -94,7 +94,33 @@ LOG_CHANNEL=your_log_channel_id
 
 ---
 
-## 💬 Need Help?
+## 🛠️ Advanced & Production Run
 
-Open an issue or discussion
+For long-term or production use, you can run the bot with [PM2](https://pm2.keymetrics.io/), a process manager that keeps your bot alive and restarts it if it crashes.
+
+### 1. Install PM2 Globally
+
+```bash
+npm install pm2 -g
+```
+
+### 2. Start the Bot with PM2
+
+```bash
+pm2 start index.js
+```
+
+This will keep your bot running in the background, even after you close your terminal.
+
+To view logs:
+
+```bash
+pm2 logs index
+```
+
+To stop the bot:
+
+```bash
+pm2 stop index
+```
 
