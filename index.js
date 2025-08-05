@@ -5,7 +5,7 @@ const client = new Client()
 client.on('ready', async () => {
     console.log(`Logged in as ${client.user.tag}!`)
     client.user.setStatus('dnd') // set the status to do not disturb
-    client.user.setActivity(process.env.ACTIVITY_MESSAGE || 'Whats good bruv', { type: 'WATCHING' }) // set the activity from env or default
+    client.user.setActivity(process.env.CLIENT_STATUS, { type: 'WATCHING' }) // set the activity from env or default
     console.log(`Status set to DND and activity set to "Bumping the server!"`) // log the status and activity in console
 
     const channel = await client.channels.fetch(process.env.BUMP_CHANNEL) // get the channel to send bumps
