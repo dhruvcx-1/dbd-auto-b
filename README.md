@@ -70,8 +70,8 @@ npm start
 
 ```properties
 TOKEN=your_discord_token_here
-BUMP_CHANNEL=123456789012345678
-LOG_CHANNEL=123456789012345678
+BUMP_CHANNEL=your_bump_channel_id
+LOG_CHANNEL=your_log_channel_id
 ```
 
 ---
@@ -91,11 +91,6 @@ LOG_CHANNEL=123456789012345678
 - Each bump is logged in a separate channel for tracking.
 - Random intervals help avoid detection by automated systems.
 
----
-
-## 📄 License
-
-MIT License
 
 ---
 
