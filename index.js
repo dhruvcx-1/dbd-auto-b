@@ -27,7 +27,7 @@ client.on('ready', async () => {
         }, randomNum)
     }
     
-    await bump()
+    bump()
     loop()
 })
 
