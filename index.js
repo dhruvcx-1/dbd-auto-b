@@ -15,6 +15,7 @@ client.on('ready', async () => {
         return
     }
     console.log(`Bump channel and log channel fetched successfully.`) // log the channels fetched in console
+    await logChannel.send(`Bot started at ${new Date().toLocaleTimeString()}`) // log the bot start time in log channel
     
     async function bump() {
         await channel.sendSlash('302050872383242240', 'bump') // send the bump command in the channel
@@ -29,13 +30,13 @@ client.on('ready', async () => {
         var nextBumpTime = new Date(Date.now() + randomNum) // calculate the next bump time
         await logChannel.send(`Next bump scheduled at ${nextBumpTime.toLocaleTimeString()}`) // log the next bump time in log channel
         console.log(`Next bump scheduled at ${nextBumpTime.toLocaleTimeString()}`) // log the next bump time in console
-        setTimeout(function () {
-            bump()
+        setTimeout(async function () {
+            await bump()
             loop()
         }, randomNum)
     }
     
-    bump()
+    await bump()
     loop()
 })
 
