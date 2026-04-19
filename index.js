@@ -1,43 +1,85 @@
-require('dotenv').config()
-const { Client } = require('discord.js-selfbot-v13')
-const client = new Client()
+const config = require('./src/config')
+const { createLogger } = require('./src/logger')
+const { createBot } = require('./src/bot')
+const { createScheduler } = require('./src/scheduler')
+const { createKeywordsStore } = require('./src/keywords')
+const { createWebServer } = require('./src/web')
 
-client.on('ready', async () => {
-    console.log(`Logged in as ${client.user.tag}!`)
-    client.user.setStatus('dnd') // set the status to do not disturb
-    client.user.setActivity(process.env.CLIENT_STATUS, { type: 'WATCHING' }) // set the activity from env or default
-    console.log(`Status set to DND and activity set to "Bumping the server!"`) // log the status and activity in console
-
-    const channel = await client.channels.fetch(process.env.BUMP_CHANNEL) // get the channel to send bumps
-    const logChannel = await client.channels.fetch(process.env.LOG_CHANNEL) // get the channel to log bumps
-    if (!channel || !logChannel) {
-        console.error('Bump or log channel not found! Please check your .env file.')
-        return
-    }
-    console.log(`Bump channel and log channel fetched successfully.`) // log the channels fetched in console
-    await logChannel.send(`Bot started at ${new Date().toLocaleTimeString()}`) // log the bot start time in log channel
-    
-    async function bump() {
-        await channel.sendSlash('302050872383242240', 'bump') // send the bump command in the channel
-        console.log(`Bumped the server at ${new Date().toLocaleTimeString()}`) // log the bump time in console
-        await logChannel.send(`Bumped the server at ${new Date().toLocaleTimeString()}`) // log the bump time in log channel
-        console.log(`Sent bump message at ${new Date().toLocaleTimeString()}`)// log the bump message time in console
-    }
-
-    async function loop() {
-        // Random interval between 2 and 2.5 hours (in ms)
-        var randomNum = Math.round(Math.random() * (9000000 - 7200000 + 1)) + 7200000 // 7200000 ms = 2 hours, 9000000 ms = 2.5 hours
-        var nextBumpTime = new Date(Date.now() + randomNum) // calculate the next bump time
-        await logChannel.send(`Next bump scheduled at ${nextBumpTime.toLocaleTimeString()}`) // log the next bump time in log channel
-        console.log(`Next bump scheduled at ${nextBumpTime.toLocaleTimeString()}`) // log the next bump time in console
-        setTimeout(async function () {
-            await bump()
-            loop()
-        }, randomNum)
-    }
-    
-    await bump()
-    loop()
+const logger = createLogger({
+  logFilePath: config.logFilePath,
+  maxFileSizeBytes: config.maxLogFileSizeBytes,
 })
 
-client.login(process.env.TOKEN)
+const missingRequired = []
+if (!config.token) missingRequired.push('TOKEN')
+if (!config.bumpChannelId) missingRequired.push('BUMP_CHANNEL')
+if (!config.logChannelId) missingRequired.push('LOG_CHANNEL')
+
+if (missingRequired.length > 0) {
+  logger.error(`missing required environment variables: ${missingRequired.join(', ')}`)
+  process.exit(1)
+}
+
+const keywords = createKeywordsStore({
+  filePath: config.keywordsFilePath,
+  logger,
+})
+
+logger.info(`keywords store loaded from ${keywords.filePath} with ${keywords.count()} items`)
+
+const bot = createBot({ config, logger, keywords })
+
+const scheduler = createScheduler({
+  minIntervalMs: config.intervalMinMs,
+  maxIntervalMs: config.intervalMaxMs,
+  logger,
+  onBump: async () => {
+    await bot.bump()
+  },
+})
+
+bot.setStatusProvider(() => {
+  const schedulerState = scheduler.isPaused()
+    ? 'PAUSED'
+    : scheduler.isRunning()
+    ? 'RUNNING'
+    : 'ACTIVE'
+
+  return {
+    botState: bot.isReady() ? 'ONLINE' : 'STARTING',
+    schedulerState,
+    lastBump: scheduler.getLastBump(),
+    nextBump: scheduler.getNextBump(),
+    uptimeSeconds: process.uptime(),
+    memoryRssMb: process.memoryUsage().rss / 1024 / 1024,
+    pid: process.pid,
+  }
+})
+
+bot.setReadyHandler(async () => {
+  logger.info('bot ready, starting scheduler')
+  await scheduler.forceBump()
+  scheduler.resume()
+})
+
+createWebServer({
+  config,
+  logger,
+  bot,
+  scheduler,
+  keywords,
+})
+
+bot.start().catch((error) => {
+  logger.error(`bot login failed: ${error.message}`)
+  process.exit(1)
+})
+
+process.on('unhandledRejection', (error) => {
+  logger.error(`unhandled rejection: ${error.message}`)
+})
+
+process.on('uncaughtException', (error) => {
+  logger.error(`uncaught exception: ${error.message}`)
+  process.exit(1)
+})
